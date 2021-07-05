@@ -3,11 +3,11 @@ import asyncio
 import objects
 import _thread
 from time import sleep
-from objects import GoogleDrive
+from objects import time_now, GoogleDrive
 from telethon.sync import TelegramClient, events
 from datetime import datetime, timezone, timedelta
 # =================================================================================================================
-stamp1 = objects.time_now()
+stamp1 = time_now()
 Auth = objects.AuthCentre(ID_DEV=-1001312302092, TOKEN=os.environ['TOKEN'])
 
 
@@ -24,23 +24,6 @@ def sessions_creation():
 sessions_creation()
 tz = timezone(timedelta(hours=3))
 # =================================================================================================================
-Auth.dev.start(stamp1)
-
-
-def thread():
-    try:
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        client = TelegramClient(os.environ['session'], int(os.environ['api_id']), os.environ['api_hash']).start()
-        with client:
-            Auth.dev.printer(f"Сессия в работе: {os.environ['session']}")
-
-            @client.on(events.NewMessage(chats=os.environ['chat']))
-            async def response_user_update(response):
-                await client.forward_messages(-1001532518410, response.message)
-
-            client.run_until_disconnected()
-    except IndexError and Exception:
-        Auth.dev.thread_except()
 
 
 def auto_reboot():
@@ -62,6 +45,27 @@ def auto_reboot():
             Auth.dev.thread_except()
 
 
-if __name__ == '__main__':
-    _thread.start_new_thread(auto_reboot, ())
-    thread()
+def start(stamp):
+    try:
+        if os.environ.get('local'):
+            Auth.dev.printer(f'Запуск скрипта локально за {time_now() - stamp} сек.')
+        else:
+            Auth.dev.start(stamp1)
+            _thread.start_new_thread(auto_reboot, ())
+            Auth.dev.printer(f'Скрипт запущен за {time_now() - stamp} сек.')
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        client = TelegramClient(os.environ['session'], int(os.environ['api_id']), os.environ['api_hash']).start()
+        with client:
+            Auth.dev.printer(f"Сессия в работе: {os.environ['session']}")
+
+            @client.on(events.NewMessage(chats=os.environ['chat']))
+            async def response_user_update(response):
+                await client.forward_messages(-1001532518410, response.message)
+
+            client.run_until_disconnected()
+    except IndexError and Exception:
+        Auth.dev.thread_except()
+
+
+if os.environ.get('local'):
+    start(stamp1)
